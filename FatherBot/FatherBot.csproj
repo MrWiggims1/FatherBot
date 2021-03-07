@@ -5,6 +5,7 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerFileRunArguments>-v "C:/Users/Liam Thompson/Desktop/dockerpath:/media"</DockerFileRunArguments>
     <StartupObject>FatherBot.Program</StartupObject>
+    <Configurations>Debug</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="FatherBotDB.db" />
