@@ -21,7 +21,7 @@ namespace FatherBot
             RunBot().GetAwaiter().GetResult();
         }
 
-        private static Config Config = new Config().CreatConfig();
+        private static Config Config = new Config().CreateConfig();
 
 
         static async Task RunBot()
@@ -54,6 +54,8 @@ namespace FatherBot
             CheckDatabase(Client);
 
             await Client.ConnectAsync();
+
+            //await Client.UpdateStatusAsync(activity: new DiscordActivity(Config.BotActivity.Activity, (ActivityType) Enum.Parse(typeof(ActivityType), Config.BotActivity.ActivityType)));
 
             await Task.Delay(-1);
         }

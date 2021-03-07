@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Text;
 
@@ -13,16 +14,21 @@ namespace FatherBot
 
         public string CommandPrefix { get; set; }
 
-        public string FilePath = ".";
+        public string RootFilePath = ConfigurationManager.AppSettings["RootDir"];
 
         [JsonIgnore]
-        public string ConfigFilePath => FilePath + "/config.json";
+        public string ConfigFilePath => RootFilePath + "config.json";
 
         public bool ImResponseEnabled { get; set; }
 
+        public BotActivity BotActivity {get; set;}
 
-        public Config CreatConfig()
+
+        public Config CreateConfig()
         {
+            if (!Directory.Exists(RootFilePath))
+                Directory.CreateDirectory(RootFilePath);
+
             if (!File.Exists(ConfigFilePath))
             {
                 using (StreamWriter sw = File.CreateText(ConfigFilePath))
