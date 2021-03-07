@@ -1,5 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.CommandsNext.Exceptions;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Emzi0767.Utilities;
@@ -9,6 +11,7 @@ using System;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using static FatherBotDatabase.DataBaseBuilder;
 
@@ -26,6 +29,9 @@ namespace FatherBot
 
         static async Task RunBot()
         {
+            if (Config.BotToken == null ||Config.CommandPrefix == null)
+                Console.WriteLine("Please fill in config file.");
+
             var Client = new DiscordClient(new DiscordConfiguration()
             {
                 Token = Config.BotToken,
@@ -117,6 +123,9 @@ namespace FatherBot
 
         private static Task Client_MessageRecieved(DiscordClient sender, MessageCreateEventArgs e)
         {
+            if (e.Message.Content.ToLower().StartsWith(Config.CommandPrefix))
+                return Task.CompletedTask;
+
             var responses = DataAccess.Responses.LoadResponseMessages();
 
             AutoResponder responder = new AutoResponder(sender, e.Message, responses.ToArray());                
@@ -124,11 +133,84 @@ namespace FatherBot
             return Task.CompletedTask;
         }
 
-        private static Task Commands_CommandErrored(CommandsNextExtension sender, CommandErrorEventArgs e)
+        private static async Task Commands_CommandErrored(CommandsNextExtension sender, CommandErrorEventArgs e)
         {
-            sender.Client.Logger.LogError($"`{e.Context.User.Username}` tried to execute `{e.Command.QualifiedName}` but failed.",e.Exception);
+            sender.Client.Logger.LogError($"`{e.Context.User.Username}` tried to execute `{e.Command?.QualifiedName ?? "<UnkownCommand>"}` but failed.", e.Exception);
 
-            return Task.CompletedTask;
+            DiscordMessageBuilder messageBuilder = new DiscordMessageBuilder()
+                .WithReply(e.Context.Message.Id);
+
+            DiscordEmbedBuilder embed = new DiscordEmbedBuilder() {
+                Title = $"{sender.Client.CurrentUser.Username} encountered an error",
+                Color = DiscordColor.Red
+            };
+
+            switch (e.Exception) {
+                case ChecksFailedException cFe: //Thrown if member does not meet the commands requirements
+                    var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
+                    StringBuilder CheckBuilder = new StringBuilder();
+
+                    foreach (var check in cFe.FailedChecks) { 
+                        switch (check) {
+                            case CooldownAttribute cooldown:
+                                if (cooldown.MaxUses != 1) 
+                                {
+                                    CheckBuilder.Append($"{cooldown.GetRemainingCooldown(e.Context):hh\\:mm\\:ss} till next available.");
+                                    embed.WithFooter($"You can use this command {cooldown.MaxUses} times within {cooldown.Reset:hh\\:mm\\:ss}");
+                                }
+                                else
+                                    CheckBuilder.Append($"Cool down reset in {cooldown.GetRemainingCooldown(e.Context):hh\\:mm\\:ss}");
+                                return;
+
+                            case RequirePrefixesAttribute requirePrefixes:
+                                if (requirePrefixes.Prefixes.Length > 1)
+                                    CheckBuilder.Append($"\nRequires one of the following prefixes: {String.Join(", ", requirePrefixes.Prefixes)}.");
+                                else
+                                    CheckBuilder.Append($"\nRequires the prefix: {requirePrefixes.Prefixes.First()}.");
+                                return;
+
+                            case RequirePermissionsAttribute perm:
+                                CheckBuilder.Append($"\nPermissions required: {perm.Permissions}.");
+                                break;
+
+                            case RequireOwnerAttribute ownerOnly:
+                                CheckBuilder.Append($"\nThis command can only executed by the bot owner.");
+                                break;
+
+                            case RequireNsfwAttribute nsfw:
+                                CheckBuilder.Append($"\nThis command can only be executed within a channel marked as NSFW.");
+                                break;
+
+                            case RequireGuildAttribute reqGuild:
+                                CheckBuilder.Append($"\nThis command can only be executed within a server.");
+                                break;
+
+                            case RequireDirectMessageAttribute reqDM:
+                                CheckBuilder.Append($"\nThis command can only be executed within {e.Context.Client.CurrentUser.Username}'s DMs.");
+                                break;
+
+                            case RequireRolesAttribute reqRole:
+                                CheckBuilder.Append($"\nThis command requires you to have {reqRole.CheckMode} of following roles: {String.Join(", ", reqRole.RoleNames)}");
+                                break;
+
+                            default:
+                                CheckBuilder.Append($"\n{check.GetType().Name}.");
+                                break;
+                        }
+                    }
+                    embed.WithTitle("Access denied");
+                    embed.WithDescription($"{emoji} You do not have the ability to execute this command. you failed the following checks: {CheckBuilder}");
+                    break;
+
+                case CommandNotFoundException cnf:
+                    return;
+
+                default:
+                    embed.WithDescription(e.Exception.Message ?? "An unexpected error occurred.");
+                    break;
+            }
+
+            await messageBuilder.WithEmbed(embed.Build()).SendAsync(e.Context.Channel);
         }
 
         private static Task Commands_CommandExecuted(CommandsNextExtension sender, CommandExecutionEventArgs e)

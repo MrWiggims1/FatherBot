@@ -25,26 +25,36 @@ namespace FatherBotDatabase
                 }
             }
 
-            public static void SaveResponseMessage(ResponseMessage responseMessage)
+            public static ResponseMessage AddResponse(string trigger, string response, bool enabled, bool giveGot)
             {
                 using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString()))
                 {
-                    cnn.Execute("INSERT INTO Responses (Id, Trigger, Response, Enabled, GiveGot) values (@Trigger @Response @Enabled @GiveGot);", responseMessage);
-                }
-            }
-
-            public static ResponseMessage AddResponse(string trigger, string response, bool enabled = true, bool giveGot = true)
-            {
-                using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString()))
-                {
-                    ResponseMessage newResponse = new ResponseMessage(trigger, response);
+                    ResponseMessage newResponse = new ResponseMessage(trigger, response, enabled, giveGot);
 
                     cnn.Execute($"INSERT INTO Responses (Trigger, Response, Enabled, GiveGot) values (@Trigger, @Response, @Enabled, @GiveGot);", newResponse);
 
-                    var output = cnn.Query($"SELECT * from Responses WHERE Trigger = {trigger}");
+                    var output = cnn.Query($"SELECT * from Responses WHERE Trigger = '{trigger}';");
 
                     return output.Single();
                 }
+            }
+
+            public static void RemoveResponse(string trigger)
+            {
+                using (IDbConnection cnn = new SQLiteConnection(LoadConnectionString())) 
+                {
+                    cnn.Execute($"DELETE FROM Responses WHERE Trigger = '{trigger}';");
+                }
+            }
+
+            public static ResponseMessage ModifyResponse(string trigger, string response, bool enabled, bool giveGot)
+            {
+                try {
+                    RemoveResponse(trigger);
+                }
+                finally { }
+
+                return AddResponse(trigger, response, enabled, giveGot);
             }
         }
 

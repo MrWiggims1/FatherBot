@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "FatherBot": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    },
+    "custom docker": {
+      "commandName": "Executable"
+    }
+  }
+}

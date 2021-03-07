@@ -11,10 +11,12 @@ namespace FatherBot.Models
 
         }
 
-        public ResponseMessage(string trigger, string response)
+        public ResponseMessage(string trigger, string response, bool enabled, bool giveGot)
         {
             Trigger = trigger;
             Response = response;
+            Enabled = enabled;
+            GiveGot = GiveGot;
         }
 
         public int Id { get; set; }
@@ -23,8 +25,8 @@ namespace FatherBot.Models
 
         public string Response { get; set; }
 
-        public long Enabled { get; set; } = 1;
+        public bool Enabled { get; set; } = true;
 
-        public long GiveGot { get; set; } = 1;
+        public bool GiveGot { get; set; } = true;
     }
 }

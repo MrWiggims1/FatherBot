@@ -16,6 +16,6 @@ namespace FatherBotDatabase.Models
         public bool IsIgnored { get; set; }
         public int MessagesSent { get; set; }
 
-        public double GotRatio => (MessagesSent > 0) ? Gots / MessagesSent : 0;
+        public double GotRatio => (MessagesSent > 0) ? Math.Round((double)Gots / (double)MessagesSent, 3) * 100 : 0;
     }
 }
